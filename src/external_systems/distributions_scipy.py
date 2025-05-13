@@ -26,7 +26,7 @@ class ExponentialDistributionScipy(DistributionModel):
 
         :return: The fitted parameters of the distribution (loc, scale).
         """
-        params = expon.fit(data, floc=loc)
+        params = expon.fit(data)
         self.distribution = expon(loc=params[0], scale=params[1])
         return params
 
