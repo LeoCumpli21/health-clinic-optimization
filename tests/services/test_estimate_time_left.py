@@ -12,16 +12,32 @@ class MockPriorityQueue:
         return iter(self.customers_list)
 
 
+# Helper class to mock DataFrame behavior
+class MockDataFrame:
+    def __init__(self, data_list):
+        self.data_list = data_list
+
+    @property
+    def iloc(self):
+        # This makes it so that accessing .iloc returns the list,
+        # and then .iloc[0] accesses the first element of that list.
+        return self.data_list
+
+
 # Mock Repository to simulate fetching service times
 class MockRepository:
     def __init__(self, service_times_map):
         # service_times_map is a dict mapping ticket_type to service_time
         self.service_times_map = service_times_map
 
-    def get_service_time(self, ticket_type):
-        return self.service_times_map.get(
+    def get_data(self, query_dict):
+        ticket_type = query_dict.get("ticket_type")
+        service_time = self.service_times_map.get(
             ticket_type, 0
         )  # Default to 0 if type not found
+        # Return an object that mimics DataFrame.iloc[0]["service_time"]
+        # The list wrapper is for .iloc, and the dict is for ["service_time"]
+        return MockDataFrame([{"service_time": service_time}])
 
 
 def test_estimate_time_left_empty_queue():
