@@ -58,22 +58,32 @@ class PriorityQueueLeo(PriorityQueue):
             new_priority (int): The new priority value for the customer.
             priority_ticket_types (Set[str]): A set of ticket types that should have adjusted priorities.
         """
-        updated_heap = []
-        for priority, current_customer in self.heap:
-            if current_customer.customer_id == customer_id:
-                # Update the priority of the specified customer
-                updated_heap.append((new_priority, current_customer))
-            else:
-                # Adjust priorities for customers with specific ticket types
-                if (
-                    current_customer.ticket_type in priority_ticket_types
-                    and priority >= new_priority
-                ):
-                    updated_heap.append((priority + 1, current_customer))
-                else:
-                    updated_heap.append((priority, current_customer))
-        heapq.heapify(updated_heap)
-        self.heap = updated_heap
+        print("Before update:", self.heap)  # Debug: Print heap before update
+
+        # Create a dictionary to ensure each customer appears only once
+        customer_dict = {
+            customer.customer_id: (priority, customer)
+            for priority, customer in self.heap
+        }
+
+        # Update the priority of the specified customer
+        if customer_id in customer_dict:
+            customer_dict[customer_id] = (new_priority, customer_dict[customer_id][1])
+
+        # Adjust priorities for customers with specific ticket types
+        for cid, (priority, customer) in customer_dict.items():
+            if (
+                cid != customer_id
+                and customer.ticket_type in priority_ticket_types
+                and priority >= new_priority
+            ):
+                customer_dict[cid] = (priority + 1, customer)
+
+        # Rebuild the heap
+        self.heap = list(customer_dict.values())
+        heapq.heapify(self.heap)
+
+        print("After update:", self.heap)  # Debug: Print heap after update
         return None
 
     def print_queue(self):
