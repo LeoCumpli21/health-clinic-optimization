@@ -1,3 +1,8 @@
+"""
+Defines the Customer class, which represents a customer in the health clinic.
+"""
+
+
 class Customer:
     def __init__(self, customer_id: int, arrival_time, ticket_type: str):
         self.customer_id = customer_id

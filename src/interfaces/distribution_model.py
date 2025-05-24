@@ -4,6 +4,9 @@ import pandas as pd
 
 
 class DistributionModel(ABC):
+    def __init__(self):
+        self.distribution = None
+
     @abstractmethod
     def fit(self, data: pd.DataFrame):
         """
