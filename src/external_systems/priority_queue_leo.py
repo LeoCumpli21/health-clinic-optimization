@@ -53,6 +53,15 @@ class PriorityQueueLeo(PriorityQueue):
         """
         Update the priority of a specific customer and adjust priorities of others if necessary.
 
+        The update process involves:
+        1. Creating a dictionary from the current heap to ensure each customer is processed uniquely.
+        2. Updating the priority of the target customer (`customer_id`) to `new_priority`.
+        3. Iterating through other customers in the queue:
+            - If a customer's ticket type is in `priority_ticket_types` and their current priority
+                is greater than or equal to `new_priority`, their priority is incremented by 1.
+                This is to make space for the updated customer and maintain relative orderings.
+        4. Rebuilding the heap with the modified priorities.
+
         Args:
             customer_id (int): The ID of the customer whose priority needs to be updated.
             new_priority (int): The new priority value for the customer.

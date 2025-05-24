@@ -1,10 +1,25 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Set
+from typing import Any, Optional, Set, Iterable
 
 from src.entities.customer import Customer
 
 
 class PriorityQueue(ABC):
+    def __init__(self, queue: Iterable[Any]):
+        """
+        Initialize the priority queue.
+
+        """
+        self.queue = queue
+        pass
+
+    def __iter__(self):
+        """
+        Iterate over the customers in the queue.
+        :return: An iterator over the customers in the queue.
+        """
+        return iter(self.queue)
+
     @abstractmethod
     def enqueue(self, customer, priority):
         """
@@ -34,6 +49,7 @@ class PriorityQueue(ABC):
         """
         pass
 
+    @abstractmethod
     def print_queue(self):
         """
         Print the contents of the queue.
