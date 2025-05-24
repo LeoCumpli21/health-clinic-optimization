@@ -1,5 +1,5 @@
 import heapq
-from typing import Set, Tuple
+from typing import Optional, Set, Tuple
 
 from src.entities.customer import Customer
 from src.interfaces.priority_queue import PriorityQueue
@@ -20,7 +20,7 @@ class PriorityQueueLeo(PriorityQueue):
         self.heap = heap
         heapq.heapify(self.heap)
 
-    def enqueue(self, customer: Customer, priority: int):
+    def enqueue(self, customer: Customer, priority: int) -> None:
         """
         Add a customer to the priority queue with a given priority.
 
@@ -31,7 +31,7 @@ class PriorityQueueLeo(PriorityQueue):
         heapq.heappush(self.heap, (priority, customer))
         return None
 
-    def dequeue(self):
+    def dequeue(self) -> Optional[Customer]:
         """
         Remove and return the customer with the highest priority (lowest priority value).
 
