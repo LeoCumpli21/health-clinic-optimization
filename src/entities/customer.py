@@ -9,5 +9,8 @@ class Customer:
         self.arrival_time = arrival_time
         self.ticket_type = ticket_type
 
+    def __eq__(self, other):
+        return self.customer_id == other.customer_id
+
     def __lt__(self, other):
         return self.customer_id < other.customer_id

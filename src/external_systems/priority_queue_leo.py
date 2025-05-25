@@ -1,5 +1,7 @@
-import heapq
-from typing import Optional, Set, Tuple
+"""This module provides an implementation of a priority queue using collections.deque."""
+
+from collections import deque
+from typing import Optional, List
 
 from src.entities.customer import Customer
 from src.interfaces.priority_queue import PriorityQueue
@@ -7,101 +9,83 @@ from src.interfaces.priority_queue import PriorityQueue
 
 class PriorityQueueLeo(PriorityQueue):
     """
-    A priority queue implementation using a heap. Items are stored as tuples of (priority, Customer).
+    A priority queue implementation using a deque from collections.
     """
 
-    def __init__(self, heap: list[Tuple[int, Customer]] = []):
-        """
-        Initialize the priority queue with an optional heap.
+    def __init__(self, queue: deque[Customer] | List[Customer]):
+        """Initializes the priority queue with an optional deque or list.
 
         Args:
-            heap (list[Tuple[int, Customer]]): A list of (priority, Customer) tuples to initialize the heap.
+            queue (deque[Customer] | List[Customer]): An optional deque or list
+                of Customer objects to initialize the queue. If a list is provided,
+                it will be converted to a deque.
         """
-        self.heap = heap
-        heapq.heapify(self.heap)
+        if isinstance(queue, list):
+            queue = deque(queue)
+        self.queue = queue
 
-    def enqueue(self, customer: Customer, priority: int) -> None:
-        """
-        Add a customer to the priority queue with a given priority.
+    def enqueue(self, customer: Customer) -> None:
+        """Add a customer to the queue.
+
+        Specifically, this implementation adds the customer to the rear (right end)
+        of an internal deque.
 
         Args:
-            customer (Customer): The customer to add to the queue.
-            priority (int): The priority of the customer.
+            customer (Customer): The customer object to be added.
         """
-        heapq.heappush(self.heap, (priority, customer))
+        self.queue.append(customer)
         return None
 
     def dequeue(self) -> Optional[Customer]:
-        """
-        Remove and return the customer with the highest priority (lowest priority value).
+        """Remove and return a customer from the queue.
+
+        Specifically, this implementation removes and returns the customer
+        from the front (left end) of an internal deque. This results
+        in FIFO (First-In, First-Out) behavior.
 
         Returns:
-            Customer: The customer with the highest priority, or None if the queue is empty.
+            Optional[Customer]: The customer removed from the queue,
+                                or None if the queue is empty.
         """
-        if not self.heap:
+        if not self.queue:
             return None
-        _, customer = heapq.heappop(self.heap)
-        # Decrease all remaining customers' priorities by 1
-        updated_heap = [(p - 1, c) for p, c in self.heap]
-        heapq.heapify(updated_heap)
-        self.heap = updated_heap
+        customer = self.queue.popleft()
         return customer
 
-    def update_priority(
-        self, customer_id: int, new_priority: int, priority_ticket_types: Set[str]
-    ):
-        """
-        Update the priority of a specific customer and adjust priorities of others if necessary.
+    def update_priority(self, customer: Customer, new_position: int) -> None:
+        """Update the position of a customer in the queue.
 
-        The update process involves:
-        1. Creating a dictionary from the current heap to ensure each customer is processed uniquely.
-        2. Updating the priority of the target customer (`customer_id`) to `new_priority`.
-        3. Iterating through other customers in the queue:
-            - If a customer's ticket type is in `priority_ticket_types` and their current priority
-                is greater than or equal to `new_priority`, their priority is incremented by 1.
-                This is to make space for the updated customer and maintain relative orderings.
-        4. Rebuilding the heap with the modified priorities.
+        This method changes the customer's effective priority by moving them
+        to a new position within the deque. The customer is first removed
+        from their current position and then inserted at the specified
+        `new_position`.
 
         Args:
-            customer_id (int): The ID of the customer whose priority needs to be updated.
-            new_priority (int): The new priority value for the customer.
-            priority_ticket_types (Set[str]): A set of ticket types that should have adjusted priorities.
+            customer (Customer): The customer object whose position is to be updated.
+            new_position (int): The new index (0-based) where the customer
+                                should be placed in the queue.
         """
-        print("Before update:", self.heap)  # Debug: Print heap before update
-
-        # Create a dictionary to ensure each customer appears only once
-        customer_dict = {
-            customer.customer_id: (priority, customer)
-            for priority, customer in self.heap
-        }
-
-        # Update the priority of the specified customer
-        if customer_id in customer_dict:
-            customer_dict[customer_id] = (new_priority, customer_dict[customer_id][1])
-
-        # Adjust priorities for customers with specific ticket types
-        for cid, (priority, customer) in customer_dict.items():
-            if (
-                cid != customer_id
-                and customer.ticket_type in priority_ticket_types
-                and priority >= new_priority
-            ):
-                customer_dict[cid] = (priority + 1, customer)
-
-        # Rebuild the heap
-        self.heap = list(customer_dict.values())
-        heapq.heapify(self.heap)
-
-        print("After update:", self.heap)  # Debug: Print heap after update
+        self.queue.remove(customer)
+        self.queue.insert(new_position, customer)
         return None
 
-    def print_queue(self):
+    def print_queue(self) -> None:
+        """Print the contents of the queue.
+
+        Customers are displayed in order of processing priority,
+        from highest priority (next to be dequeued) to lowest priority.
+        The customer at the right end of the internal deque is dequeued first.
         """
-        Print the contents of the priority queue in order of priority.
-        """
-        sorted_queue = sorted(self.heap, key=lambda x: x[0])
-        for priority, customer in sorted_queue:
+        if not self.queue:
+            print("Queue is empty.")
+            return
+
+        print("Current Queue (Highest priority first - i.e., next to be dequeued):")
+        # self.queue.pop() removes from the right, so the rightmost element is highest priority.
+        # We iterate self.queue in reverse to print from highest to lowest priority.
+        # enumerate provides a rank, starting from 1 for the highest priority customer.
+        for rank, customer in enumerate(self.queue, 1):
             print(
-                f"Priority: {priority}, Customer ID: {customer.customer_id}, Ticket Type: {customer.ticket_type}"
+                f"Rank: {rank}, Customer ID: {customer.customer_id}, Ticket Type: {customer.ticket_type}"
             )
         return None
