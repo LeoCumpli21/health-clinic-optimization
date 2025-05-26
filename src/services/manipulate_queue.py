@@ -3,13 +3,14 @@ including calculating optimal positions for priority customers and updating the 
 based on service times and priority thresholds.
 """
 
+from datetime import datetime
 from typing import List, Tuple, Set
 
 from src.entities.customer import Customer
 from src.interfaces.priority_queue import PriorityQueue
 from src.interfaces.repository import Repository
 from src.services.estimate_time_left import (
-    estimate_times_left,
+    estimate_total_times_in_line,
     get_estimated_service_time,
 )
 
@@ -103,21 +104,24 @@ def update_queue_improved(
     priority_tickets: Set[str],
     p_threshold: float,
     non_p_threshold: float,
+    current_time: datetime,
 ) -> PriorityQueue:
     """Optimizes the customer queue by iteratively moving priority customers forward.
 
     This function repeatedly evaluates the queue and attempts to move priority
     customers to better positions. A move is considered if a priority customer's
-    estimated waiting time exceeds `p_threshold`. The customer is moved forward
-    by skipping non-priority customers, as long as the skipped non-priority
-    customers' new estimated waiting times do not exceed `non_p_threshold`,
-    and the priority customer's own waiting time does not drop below `p_threshold`
-    too soon (as per `calculate_customer_new_position` logic).
+    total estimated waiting time (time already waited + future estimated wait)
+    exceeds `p_threshold`. The customer is moved forward by skipping non-priority
+    customers, as long as the skipped non-priority customers' new total estimated
+    waiting times do not exceed `non_p_threshold`, and the priority customer's
+    own total waiting time does not drop below `p_threshold` too soon (as per
+    `calculate_customer_new_position` logic).
 
     The process is iterative (stabilization loop): after each successful move of a
-    priority customer, the estimated waiting times for all customers are
-    recalculated, and the entire queue is re-evaluated from the beginning.
-    This ensures that decisions are based on the most current state of the queue.
+    priority customer, the total estimated waiting times for all customers are
+    recalculated using the provided `current_time`, and the entire queue is
+    re-evaluated from the beginning. This ensures that decisions are based on the
+    most current state of the queue and total accumulated wait times.
     The loop continues until a full pass over all customers in the queue results
     in no changes, indicating a stabilized state.
 
@@ -127,11 +131,13 @@ def update_queue_improved(
         service_points (int): The number of available service points.
         priority_tickets (Set[str]): A set of ticket type strings that identify
             priority customers.
-        p_threshold (float): The target maximum estimated waiting time for a
-            priority customer. If a priority customer's wait time is above this,
+        p_threshold (float): The target maximum total estimated waiting time for a
+            priority customer. If a priority customer's total wait time is above this,
             an attempt is made to move them forward.
-        non_p_threshold (float): The maximum permissible estimated waiting time for
+        non_p_threshold (float): The maximum permissible total estimated waiting time for
             any non-priority customer that a priority customer skips over.
+        current_time (datetime): The current time, used for calculating total
+            estimated waiting times (including time already spent in queue).
 
     Returns:
         PriorityQueue: The modified queue object with optimized customer positions.
@@ -139,8 +145,8 @@ def update_queue_improved(
     while True:  # Stabilization loop
         made_change_in_pass = False
         # Recalculate estimates at the start of each pass using the current queue state
-        estimated_waiting_times = estimate_times_left(
-            service_points, queue, service_times_repo
+        estimated_waiting_times = estimate_total_times_in_line(
+            service_points, queue, service_times_repo, current_time  # Pass current_time
         )
 
         customers_at_pass_start = []

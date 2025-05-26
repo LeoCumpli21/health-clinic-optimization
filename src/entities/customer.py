@@ -2,9 +2,11 @@
 Defines the Customer class, which represents a customer in the health clinic.
 """
 
+from datetime import datetime
+
 
 class Customer:
-    def __init__(self, customer_id: int, arrival_time, ticket_type: str):
+    def __init__(self, customer_id: int, arrival_time: datetime, ticket_type: str):
         self.customer_id = customer_id
         self.arrival_time = arrival_time
         self.ticket_type = ticket_type

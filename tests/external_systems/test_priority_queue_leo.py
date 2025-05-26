@@ -1,12 +1,22 @@
 import pytest
+from datetime import datetime, timedelta  # Added datetime and timedelta
 from src.entities.customer import Customer
 from src.external_systems.priority_queue_leo import PriorityQueueLeo
 
+# Define a base datetime for consistent testing
+BASE_DATETIME = datetime(2025, 5, 26, 12, 0, 0)
+
 
 def test_enqueue_and_dequeue():
-    # Create customers
-    customer1 = Customer(customer_id=1, arrival_time=5, ticket_type="Regular")
-    customer2 = Customer(customer_id=2, arrival_time=6, ticket_type="VIP")
+    # Create customers with datetime arrival_time
+    customer1 = Customer(
+        customer_id=1, arrival_time=BASE_DATETIME, ticket_type="Regular"
+    )
+    customer2 = Customer(
+        customer_id=2,
+        arrival_time=BASE_DATETIME + timedelta(minutes=1),
+        ticket_type="VIP",
+    )
 
     # Initialize the priority queue with an empty list
     priority_queue = PriorityQueueLeo([])  # Enqueue customers
@@ -23,11 +33,19 @@ def test_enqueue_and_dequeue():
 
 
 def test_update_priority():
-    # Create customers
-    customer1 = Customer(customer_id=1, arrival_time=5, ticket_type="Regular")
-    customer2 = Customer(customer_id=2, arrival_time=6, ticket_type="VIP")
+    # Create customers with datetime arrival_time
+    customer1 = Customer(
+        customer_id=1, arrival_time=BASE_DATETIME, ticket_type="Regular"
+    )
+    customer2 = Customer(
+        customer_id=2,
+        arrival_time=BASE_DATETIME + timedelta(minutes=1),
+        ticket_type="VIP",
+    )
     customer3 = Customer(
-        customer_id=3, arrival_time=7, ticket_type="VIP"
+        customer_id=3,
+        arrival_time=BASE_DATETIME + timedelta(minutes=2),
+        ticket_type="VIP",
     )  # Initialize the priority queue with customers
     # Initial order in deque: [customer1, customer2, customer3] (due to append)
     priority_queue = PriorityQueueLeo([customer1, customer2, customer3])
@@ -47,10 +65,14 @@ def test_update_priority():
 
 
 def test_print_queue(capsys):
-    # Create customers
-    customer1 = Customer(customer_id=1, arrival_time=5, ticket_type="Regular")
+    # Create customers with datetime arrival_time
+    customer1 = Customer(
+        customer_id=1, arrival_time=BASE_DATETIME, ticket_type="Regular"
+    )
     customer2 = Customer(
-        customer_id=2, arrival_time=6, ticket_type="VIP"
+        customer_id=2,
+        arrival_time=BASE_DATETIME + timedelta(minutes=1),
+        ticket_type="VIP",
     )  # Initialize the priority queue
     # Enqueue order: customer1, then customer2. Deque: [customer1, customer2]
     priority_queue = PriorityQueueLeo([])

@@ -1,22 +1,45 @@
-from src.entities.customer import Customer
+from datetime import datetime, timedelta
+
 from typing import Set
 
+from src.entities.customer import Customer
 from src.external_systems.priority_queue_leo import PriorityQueueLeo
 from src.external_systems.dataframe_repo import DataFrameRepo
 from src.interfaces.repository import Repository
 from src.interfaces.priority_queue import PriorityQueue as PriorityQueueInterface
 from src.services.manipulate_queue import update_queue_improved
-from src.services.estimate_time_left import estimate_times_left
+from src.services.estimate_time_left import (
+    estimate_total_times_in_line,
+)  # Changed import
 
 import pandas as pd
 
 
 def prueba_1():
-    # Create some example customers
-    customer1 = Customer(customer_id=1, arrival_time=5, ticket_type="Regular")
-    customer2 = Customer(customer_id=2, arrival_time=6, ticket_type="VIP")
-    customer3 = Customer(customer_id=3, arrival_time=7, ticket_type="VIP")
-    customer4 = Customer(customer_id=4, arrival_time=8, ticket_type="Regular")
+    # Define a base time for arrival times
+    base_time_p1 = datetime(2025, 5, 26, 8, 0, 0)
+
+    # Create some example customers with datetime arrival_time
+    customer1 = Customer(
+        customer_id=1,
+        arrival_time=base_time_p1 + timedelta(minutes=5),
+        ticket_type="Regular",
+    )
+    customer2 = Customer(
+        customer_id=2,
+        arrival_time=base_time_p1 + timedelta(minutes=6),
+        ticket_type="VIP",
+    )
+    customer3 = Customer(
+        customer_id=3,
+        arrival_time=base_time_p1 + timedelta(minutes=7),
+        ticket_type="VIP",
+    )
+    customer4 = Customer(
+        customer_id=4,
+        arrival_time=base_time_p1 + timedelta(minutes=8),
+        ticket_type="Regular",
+    )
 
     # Initialize the priority queue with an empty list
     priority_queue = PriorityQueueLeo([])
@@ -63,13 +86,16 @@ def prueba_2():
         queue_to_print: PriorityQueueInterface,
         service_points_val: int,
         repo: Repository,
-        current_time_val: float = 0.0,  # This parameter is kept for potential future use or clarity
+        current_time_val: datetime,  # Changed type to datetime
     ):
         print(f"\n--- {header} ---")
         if len(queue_to_print) > 0:
-            estimates = estimate_times_left(service_points_val, queue_to_print, repo)
+            # Use estimate_total_times_in_line and pass current_time_val
+            estimates = estimate_total_times_in_line(
+                service_points_val, queue_to_print, repo, current_time_val
+            )
             print(
-                "Queue Order (ID, Type, Arrival): Estimated Time Left (until service completion)"
+                "Queue Order (ID, Type, Arrival): Total Estimated Time (waited + future, in mins)"
             )
 
             q_iterable = (
@@ -79,25 +105,51 @@ def prueba_2():
             )
 
             for i, customer_obj in enumerate(q_iterable):
-                # estimates contains (Customer, estimated_time_until_completion)
+                # estimates contains (Customer, total_estimated_time)
                 # We need to find the estimate for the current customer_obj
                 # Assuming estimates are in the same order as q_iterable
-                est_time_left = estimates[i][1]
+                est_total_time = estimates[i][1]
+                arrival_fmt = customer_obj.arrival_time.strftime("%H:%M:%S")
                 print(
-                    f"{i+1}. C{customer_obj.customer_id} ({customer_obj.ticket_type}, Arr@{customer_obj.arrival_time}): "
-                    f"Est. Time Left={est_time_left:.2f}"
+                    f"{i+1}. C{customer_obj.customer_id} ({customer_obj.ticket_type}, Arr@{arrival_fmt}): "
+                    f"Total Est. Time={est_total_time:.2f} min"
                 )
         else:
             print("Queue is empty.")
         print("-" * (len(header) + 8))
 
-        # 1. Create Customer objects
+        # 1. Create Customer objects with datetime arrival_time
 
-    customer1 = Customer(customer_id=1, arrival_time=0, ticket_type="Regular")
-    customer2 = Customer(customer_id=2, arrival_time=1, ticket_type="VIP")
-    customer3 = Customer(customer_id=3, arrival_time=2, ticket_type="Regular")
-    customer4 = Customer(customer_id=4, arrival_time=3, ticket_type="VIP")
-    customer5 = Customer(customer_id=5, arrival_time=4, ticket_type="Regular")
+    base_time_p2 = datetime(2025, 5, 26, 9, 0, 0)  # Base time for prueba_2 arrivals
+    current_eval_time = base_time_p2 + timedelta(
+        minutes=10
+    )  # Example current time for evaluation
+
+    customer1 = Customer(
+        customer_id=1,
+        arrival_time=base_time_p2 + timedelta(minutes=0),
+        ticket_type="Regular",
+    )
+    customer2 = Customer(
+        customer_id=2,
+        arrival_time=base_time_p2 + timedelta(minutes=1),
+        ticket_type="VIP",
+    )
+    customer3 = Customer(
+        customer_id=3,
+        arrival_time=base_time_p2 + timedelta(minutes=2),
+        ticket_type="Regular",
+    )
+    customer4 = Customer(
+        customer_id=4,
+        arrival_time=base_time_p2 + timedelta(minutes=3),
+        ticket_type="VIP",
+    )
+    customer5 = Customer(
+        customer_id=5,
+        arrival_time=base_time_p2 + timedelta(minutes=4),
+        ticket_type="Regular",
+    )
 
     customers = [customer1, customer2, customer3, customer4, customer5]
 
@@ -129,10 +181,10 @@ def prueba_2():
         customer_queue,
         num_service_points,
         service_times_repo,
-        # current_time_val is 0.0 by default in print_queue_with_estimates
+        current_eval_time,  # Pass current_eval_time
     )
 
-    # 5. Call update_queue_improved
+    # 5. Call update_queue_improved with current_time
     optimized_queue = update_queue_improved(
         queue=customer_queue,
         service_times_repo=service_times_repo,
@@ -140,6 +192,7 @@ def prueba_2():
         priority_tickets=priority_ticket_types,
         p_threshold=p_threshold,
         non_p_threshold=non_p_threshold,
+        current_time=current_eval_time,  # Pass current_eval_time
     )
 
     # Print final state
@@ -148,7 +201,7 @@ def prueba_2():
         optimized_queue,
         num_service_points,
         service_times_repo,
-        # current_time_val is 0.0 by default in print_queue_with_estimates
+        current_eval_time,  # Pass current_eval_time
     )
 
 
