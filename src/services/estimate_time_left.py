@@ -37,6 +37,9 @@ def estimate_total_times_in_line(
     The total waiting time is the sum of the time already spent in the queue
     and the estimated time remaining until they are served.
 
+    This function properly accounts for multiple service windows by tracking
+    when each window becomes available and assigning customers accordingly.
+
     Args:
         service_points (int): The number of service points available.
         queue (PriorityQueue): The queue object.
@@ -49,26 +52,37 @@ def estimate_total_times_in_line(
             a customer and their total estimated waiting time in minutes (sum of
             time already waited and estimated future wait time in the queue).
     """
-    time_left = 0
     output = []
-    for customer in queue:
-        # Get the estimated service time given the ticket type
+
+    # Initialize service window availability times (all available immediately)
+    # This represents when each service window will become available
+    window_availability_times = [0.0] * service_points
+
+    for i, customer in enumerate(queue):
+        # Get the estimated service time for this customer
         service_time = get_estimated_service_time(customer, service_times_repo)
 
-        # This is the estimated time left in the queue before being served
-        estimated_time_left_in_queue = time_left / service_points
+        # Find the earliest available service window
+        earliest_available_time = min(window_availability_times)
+        earliest_window_index = window_availability_times.index(earliest_available_time)
+
+        # The customer's estimated wait time in queue is when the earliest window becomes available
+        estimated_time_left_in_queue = earliest_available_time
 
         # Calculate the time the customer has already waited in minutes
         time_already_waited = (
             current_time - customer.arrival_time
         ).total_seconds() / 60.0
 
-        # Total estimated time is the sum of time already waited and time left
+        # Total estimated time is the sum of time already waited and time left in queue
         total_estimated_time = time_already_waited + estimated_time_left_in_queue
 
         output.append((customer, total_estimated_time))
 
-        # Add current customer's service time to the time_left for the next customer
-        time_left += service_time
+        # Update the availability time for the window that will serve this customer
+        # It becomes available again after serving this customer
+        window_availability_times[earliest_window_index] = (
+            earliest_available_time + service_time
+        )
 
     return output

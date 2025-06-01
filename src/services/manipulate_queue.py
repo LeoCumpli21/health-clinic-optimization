@@ -105,6 +105,7 @@ def update_queue_improved(
     p_threshold: float,
     non_p_threshold: float,
     current_time: datetime,
+    debug: bool = False,
 ) -> PriorityQueue:
     """Optimizes the customer queue by iteratively moving priority customers forward.
 
@@ -138,12 +139,30 @@ def update_queue_improved(
             any non-priority customer that a priority customer skips over.
         current_time (datetime): The current time, used for calculating total
             estimated waiting times (including time already spent in queue).
+        debug (bool): Whether to print detailed debugging information.
 
     Returns:
         PriorityQueue: The modified queue object with optimized customer positions.
     """
+    optimization_pass = 0
+    total_moves = 0
+
+    if debug:
+        print(f"\n=== QUEUE OPTIMIZATION START ===")
+        print(
+            f"P-threshold: {p_threshold:.1f} min, NP-threshold: {non_p_threshold:.1f} min"
+        )
+        _print_queue_state(
+            queue, estimated_waiting_times=None, title="Initial Queue State"
+        )
+
     while True:  # Stabilization loop
+        optimization_pass += 1
         made_change_in_pass = False
+
+        if debug:
+            print(f"\n--- Optimization Pass {optimization_pass} ---")
+
         # Recalculate estimates at the start of each pass using the current queue state
         estimated_waiting_times = estimate_total_times_in_line(
             service_points, queue, service_times_repo, current_time  # Pass current_time
@@ -154,6 +173,28 @@ def update_queue_improved(
             customers_at_pass_start.append(
                 {"customer": customer_obj, "original_est_idx": i}
             )
+
+        # Count priority customers and their positions for debugging
+        if debug:
+            priority_customers_info = []
+            for i, customer_obj in enumerate(queue):
+                if customer_obj.ticket_type in priority_tickets:
+                    wait_time = estimated_waiting_times[i][1]
+                    priority_customers_info.append(
+                        {
+                            "position": i + 1,
+                            "customer_id": customer_obj.customer_id,
+                            "wait_time": wait_time,
+                            "exceeds_threshold": wait_time > p_threshold,
+                        }
+                    )
+
+            print(f"Priority customers in queue: {len(priority_customers_info)}")
+            for info in priority_customers_info:
+                status = "⚠️ ABOVE THRESHOLD" if info["exceeds_threshold"] else "✅ OK"
+                print(
+                    f"  Pos {info['position']}: Customer {info['customer_id']} - {info['wait_time']:.1f} min ({status})"
+                )
 
         for customer_info in customers_at_pass_start:
             current_customer = customer_info["customer"]
@@ -171,6 +212,14 @@ def update_queue_improved(
                 customer_estimated_wait = estimated_waiting_times[original_est_idx][1]
 
                 if customer_estimated_wait > p_threshold:
+                    if debug:
+                        print(
+                            f"\n🔍 Evaluating Customer {current_customer.customer_id} (P) at position {current_actual_idx + 1}"
+                        )
+                        print(
+                            f"   Current wait time: {customer_estimated_wait:.1f} min (exceeds {p_threshold:.1f} min threshold)"
+                        )
+
                     # The slice for calculate_customer_new_position must also use `estimated_waiting_times`
                     # from the start of this pass, up to the customer's original position in that list.
                     relevant_times_slice = estimated_waiting_times[
@@ -195,15 +244,70 @@ def update_queue_improved(
                         # This check is important because calculate_customer_new_position might return
                         # a skip count that results in the same index if already at/near front.
                         if new_target_index != current_actual_idx:
+                            if debug:
+                                print(
+                                    f"   ✅ MOVING Customer {current_customer.customer_id}: position {current_actual_idx + 1} → {new_target_index + 1} (skipping {num_positions_to_skip} customers)"
+                                )
+
                             queue.update_priority(current_customer, new_target_index)
                             made_change_in_pass = True
+                            total_moves += 1
+
                             # Critical: A change was made. Break from this inner loop
                             # to restart the while loop (re-calculate estimates, etc.)
                             break
+                        else:
+                            if debug:
+                                print(
+                                    f"   ⏸️ No move needed - calculated position same as current"
+                                )
+                    else:
+                        if debug:
+                            print(
+                                f"   ❌ Cannot move - no valid positions found (blocked by other P customers or thresholds)"
+                            )
+                elif debug:
+                    print(
+                        f"   ✅ Customer {current_customer.customer_id} (P) at position {current_actual_idx + 1}: {customer_estimated_wait:.1f} min (under threshold)"
+                    )
 
         if not made_change_in_pass:
+            if debug:
+                print(f"\n--- Pass {optimization_pass} complete: No changes made ---")
             break  # Exit stabilization loop if a full pass made no changes
         # If made_change_in_pass is true, the inner loop was broken,
         # and the while loop will restart, re-calculating estimates.
 
+    if debug:
+        print(f"\n=== QUEUE OPTIMIZATION COMPLETE ===")
+        print(f"Total optimization passes: {optimization_pass}")
+        print(f"Total customer moves: {total_moves}")
+
+        # Show final queue state
+        final_estimated_times = estimate_total_times_in_line(
+            service_points, queue, service_times_repo, current_time
+        )
+        _print_queue_state(queue, final_estimated_times, title="Final Queue State")
+
     return queue
+
+
+def _print_queue_state(
+    queue: PriorityQueue, estimated_waiting_times=None, title="Queue State"
+):
+    """Helper function to print the current state of the queue."""
+    print(f"\n{title}:")
+    print("Pos | Customer ID | Type | Wait Time")
+    print("----|-------------|------|----------")
+
+    for i, customer in enumerate(queue):
+        wait_time_str = "N/A"
+        if estimated_waiting_times:
+            wait_time_str = f"{estimated_waiting_times[i][1]:.1f} min"
+
+        ticket_type = customer.ticket_type
+        print(
+            f"{i+1:3d} | {customer.customer_id:11d} | {ticket_type:4s} | {wait_time_str}"
+        )
+
+    print(f"Total customers: {len(list(queue))}")
