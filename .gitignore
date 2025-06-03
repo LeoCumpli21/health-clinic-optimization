@@ -174,5 +174,3 @@ cython_debug/
 .pypirc
 
 data/
-
-notebooks/notebook_for_test_leo.ipynb

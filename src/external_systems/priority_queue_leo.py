@@ -1,6 +1,7 @@
 """This module provides an implementation of a priority queue using collections.deque."""
 
 from collections import deque
+from datetime import datetime
 from typing import Optional, List
 
 from src.entities.customer import Customer
@@ -69,7 +70,7 @@ class PriorityQueueLeo(PriorityQueue):
         self.queue.insert(new_position, customer)
         return None
 
-    def print_queue(self) -> None:
+    def print_queue(self, current_time: Optional[datetime] = None) -> None:
         """Print the contents of the queue.
 
         Customers are displayed in order of processing priority,
@@ -86,6 +87,12 @@ class PriorityQueueLeo(PriorityQueue):
         # enumerate provides a rank, starting from 1 for the highest priority customer.
         for rank, customer in enumerate(self.queue, 1):
             print(
-                f"Rank: {rank}, Customer ID: {customer.customer_id}, Ticket Type: {customer.ticket_type}"
+                f"Rank: {rank}, Customer ID: {customer.customer_id}, Ticket Type: {customer.ticket_type}",
+                end="",
             )
+            if current_time:
+                time_waited = (
+                    current_time - customer.arrival_time
+                ).total_seconds() / 60.0
+                print(f", Time waited: {time_waited:.2f} minutes")
         return None

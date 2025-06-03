@@ -53,21 +53,16 @@ def estimate_total_times_in_line(
             time already waited and estimated future wait time in the queue).
     """
     output = []
-
-    # Initialize service window availability times (all available immediately)
-    # This represents when each service window will become available
-    window_availability_times = [0.0] * service_points
+    accumulated_estimated_time_left = 0
 
     for i, customer in enumerate(queue):
         # Get the estimated service time for this customer
         service_time = get_estimated_service_time(customer, service_times_repo)
+        accumulated_estimated_time_left += service_time
 
-        # Find the earliest available service window
-        earliest_available_time = min(window_availability_times)
-        earliest_window_index = window_availability_times.index(earliest_available_time)
-
-        # The customer's estimated wait time in queue is when the earliest window becomes available
-        estimated_time_left_in_queue = earliest_available_time
+        estimated_waiting_time_in_queue = (
+            accumulated_estimated_time_left / service_points
+        )
 
         # Calculate the time the customer has already waited in minutes
         time_already_waited = (
@@ -75,14 +70,8 @@ def estimate_total_times_in_line(
         ).total_seconds() / 60.0
 
         # Total estimated time is the sum of time already waited and time left in queue
-        total_estimated_time = time_already_waited + estimated_time_left_in_queue
+        total_estimated_time = time_already_waited + estimated_waiting_time_in_queue
 
         output.append((customer, total_estimated_time))
-
-        # Update the availability time for the window that will serve this customer
-        # It becomes available again after serving this customer
-        window_availability_times[earliest_window_index] = (
-            earliest_available_time + service_time
-        )
 
     return output

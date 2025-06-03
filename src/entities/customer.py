@@ -10,9 +10,14 @@ class Customer:
         self.customer_id = customer_id
         self.arrival_time = arrival_time
         self.ticket_type = ticket_type
+        self.jumps = 0
 
     def __eq__(self, other):
         return self.customer_id == other.customer_id
 
     def __lt__(self, other):
         return self.customer_id < other.customer_id
+
+    def update_jumps(self) -> None:
+        """Update the number of jumps this customer has made in the queue."""
+        self.jumps += 1
